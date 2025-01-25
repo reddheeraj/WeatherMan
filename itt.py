@@ -45,9 +45,13 @@ def clean_response(response):
     response = send_request(url, payload, headers)
     return response.text
 
-image_path = os.path.join(IMAGE_DIR, 'Image1.jpeg')
-response = send_image_with_prompt(image_path)
-weather_report = dict_res(response.text)
-print(weather_report)
-clean_response = dict_res(clean_response(weather_report))
-print(clean_response)
+def weather_report(image_path):
+    response = send_image_with_prompt(image_path)
+    weather_report = dict_res(response.text)
+    weather_report = dict_res(clean_response(weather_report))
+    return weather_report
+
+if __name__ == "__main__":
+    image_path = "images/Image1.jpeg"
+    weather_report = weather_report(image_path)
+    print(weather_report)
