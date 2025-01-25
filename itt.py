@@ -1,6 +1,11 @@
 import requests
 import base64
 import ast
+import os
+from config import IMAGE_DIR
+
+if not os.path.exists(IMAGE_DIR):
+    os.makedirs(IMAGE_DIR)
 
 def encode_image_to_base64(image_path):
     with open(image_path, "rb") as image_file:
@@ -9,9 +14,11 @@ def encode_image_to_base64(image_path):
 def send_request(url, payload, headers):
     response = requests.post(url, json=payload, headers=headers)
     return response
+
 def dict_res(res):
     dict_res = ast.literal_eval(res)["response"]
     return dict_res
+
 def send_image_with_prompt(image_path):
     with open('prompt.txt', 'r') as file:
         prompt = file.read().strip()
@@ -38,9 +45,9 @@ def clean_response(response):
     response = send_request(url, payload, headers)
     return response.text
 
-image_path = 'Image1.jpeg'
+image_path = os.path.join(IMAGE_DIR, 'Image1.jpeg')
 response = send_image_with_prompt(image_path)
 weather_report = dict_res(response.text)
 print(weather_report)
-clean_response = clean_response(weather_report)
+clean_response = dict_res(clean_response(weather_report))
 print(clean_response)
