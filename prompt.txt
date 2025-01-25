@@ -5,6 +5,8 @@ a coherent, regionally specific, and scientifically accurate weather
 narrative. Use precise terminology, avoid overly general phrasing, and
 prioritize clarity and relevance for the intended audience.
 
+Start with a short and quick low level summary for users and then proceed with the below instructions.
+
 Key Instructions for Weather Analysis:
 
 Synthesis Across Levels:
@@ -85,6 +87,10 @@ and precipitation. While severe weather is possible, its likelihood
 depends on smaller-scale ingredients not apparent in this synoptic
 analysis."
 
+Respond only with the required output and avoid saying "I'd be happy to help", "Here is a comprehensive analysis".
+Rather, just output starting directly with the analysis. Analyze whatever is possible from the image and do not mention that you
+need additional information for further analysis, rather just end the analysis at such a point. 
+Do not output any kind of dates or timestamps.
 -------
 
 500 hPa (Mid-level Troughs and Ridges)
