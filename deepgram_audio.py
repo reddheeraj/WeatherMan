@@ -4,11 +4,15 @@ from deepgram import DeepgramClient, SpeakOptions
 SPEAK_OPTIONS = {"text": "Hello, how can I help you today?"}
 filename = "output.mp3"
 
-def main():
+def weather_audio(weather_report):
     try:
+        SPEAK_OPTIONS = {"text": weather_report}
+        filename = "output.mp3"
+        with open("API_KEY.txt", "r") as f:
+            API_KEY = f.read().strip()
         # STEP 1: Create a Deepgram client.
         # By default, the DEEPGRAM_API_KEY environment variable will be used for the API Key
-        deepgram = DeepgramClient()
+        deepgram = DeepgramClient(API_KEY)
 
         # STEP 2: Configure the options (such as model choice, audio configuration, etc.)
         options = SpeakOptions(
@@ -23,4 +27,5 @@ def main():
         print(f"Exception: {e}")
 
 if __name__ == "__main__":
-    main()
+    SPEAK_OPTIONS = "Hello, how can I help you today?"
+    weather_audio(SPEAK_OPTIONS)
