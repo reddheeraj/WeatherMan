@@ -8,7 +8,7 @@ prioritize clarity and relevance for the intended audience.
 Start with a short and quick low level summary for users and then proceed with the below instructions.
 
 Key Instructions for Weather Analysis:
-
+Identify all the countries in the image and use them in the report. The image may have countries other than the USA.
 Synthesis Across Levels:
 
 Interpret weather patterns using a "top-down" method, starting from

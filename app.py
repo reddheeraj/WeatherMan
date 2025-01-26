@@ -1,12 +1,13 @@
 from logger import get_logger
 from Agents.vision_agent import VisionAgent
 from Agents.reform_agent import ReformAgent
-from config import IMAGE_DIR, IMAGE_PROMPT, CLEANING_PROMPT, VISION_MODEL_URL, REFORM_MODEL_URL
+from config import IMAGE_DIR, IMAGE_PROMPT, CLEANING_PROMPT, VISION_MODEL_URL, REFORM_MODEL_URL, AWS_ACCESS_KEY, AWS_SECRET_KEY
 from deepgram_audio import weather_audio
 import os
 from weather_data import fetch_weather
 import streamlit as st
 import requests
+import boto3
 
 logger = get_logger(__name__)
 
@@ -64,87 +65,113 @@ def main():
     st.title("WeatherMan 🌦️")
 
     # Reordered tabs
-    tab1, tab3, tab4 = st.tabs(["Upload Image", "Weather Forecast", "About"])
+    tab1, tab3, tab4 = st.tabs(["Generate Report", "Weather Forecast", "About"])
 
     with tab1:
         st.header("Upload Weather Images")
-        image_file = st.file_uploader("Upload an Image", type=["jpeg", "jpg", "png"])
+        
+        # images from s3
+        s3 = boto3.client(
+            "s3",
+            aws_access_key_id=AWS_ACCESS_KEY,
+            aws_secret_access_key= AWS_SECRET_KEY
+        )
+        # Access the weather-man bucket
+        bucket_name = "weather-man"
+        obj_list = s3.list_objects_v2(Bucket=bucket_name).get("Contents", [])
+        # st.write("obj from s3", obj_list)
+        object_list = [obj["Key"] for obj in obj_list]
+        # for obj in object_list:
+        #     response = s3.get_object(Bucket=bucket_name, Key=obj)
+        #     image = response["Body"].read()
+            # st.image(image, caption=obj, use_container_width=True)
+        drop_down = st.selectbox("Select an image", ["Select an image"] + object_list)
+        if drop_down == "Select an image":
+            image_file = st.file_uploader("Upload an Image", type=["jpeg", "jpg", "png"])
+            image_name = image_file.name if image_file else None
+        else:
+            response = s3.get_object(Bucket=bucket_name, Key=drop_down)
+            image_file = response["Body"].read()
+            image_name = drop_down
         if image_file:
-            with open(os.path.join(IMAGE_DIR,image_file.name),"wb") as f: 
-                f.write(image_file.getbuffer())         
-            st.success("Saved File")
+            with open(os.path.join(IMAGE_DIR,image_name),"wb") as f: 
+                if drop_down == "Select an image" and image_file:
+                    f.write(image_file.getbuffer())
+                else:
+                    f.write(image_file)         
+            # st.success("Saved File")
         if image_file:
             st.image(image_file, caption="Uploaded Image", use_container_width=False)
-            st.success("Image uploaded successfully! Head over to the 'Analysis' tab to process it.")
+            # st.success("Image uploaded successfully! Head over to the 'Analysis' tab to process it.")
             st.session_state["uploaded_image"] = image_file
         
-        if st.button("Analyze image"):
-            image_file = st.session_state.get("uploaded_image", None)
-            
-            if image_file == None:
-                st.error("Please upload an image!")
-                st.stop()
-            image_name = image_file.name
-            # st.image(image_file, caption="Uploaded Image", use_container_width=True)
-            logger.info("Initializing VisionAgent and ReformAgent...")
-            # Initialize agents
-            vision_agent = VisionAgent(model_url=VISION_MODEL_URL, image_dir=IMAGE_DIR, image_name=image_name)
-            reform_agent = ReformAgent(model_url=REFORM_MODEL_URL)
+            if st.button("Analyze image"):
+                image_file = st.session_state.get("uploaded_image", None)
                 
-            logger.info("Starting image processing pipeline...")
-
-            if image_file:
-                try:
-                    with st.spinner("Processing and performing analysis..."):
-                        # st.subheader("Analysis")
-
-                        # Process image
-                        response = process_image(vision_agent, IMAGE_PROMPT)
-
-                        # Clean response
-                        cleaned_response = clean_response(reform_agent, response, CLEANING_PROMPT)
-                        print(cleaned_response)
-
-                    # Show cleaned response
-                    st.subheader("Summary")
-                    st.text_area("", value=cleaned_response, height=200)
+                if image_file == None:
+                    st.error("Please upload an image!")
+                    st.stop()
+                # image_name = image_file.name
+                # st.image(image_file, caption="Uploaded Image", use_container_width=True)
+                logger.info("Initializing VisionAgent and ReformAgent...")
+                # Initialize agents
+                vision_agent = VisionAgent(model_url=VISION_MODEL_URL, image_dir=IMAGE_DIR, image_name=image_name)
+                reform_agent = ReformAgent(model_url=REFORM_MODEL_URL)
                     
-                    st.divider()
+                logger.info("Starting image processing pipeline...")
 
-                    # Show VisionAgent response
-                    st.subheader("Detailed Analysis")
-                    st.text_area("", value=response, height=200)
+                if image_file:
+                    try:
+                        with st.spinner("Processing and performing analysis..."):
+                            # st.subheader("Analysis")
 
-                    # Generate Deepgram audio
-                    with st.spinner("Generating Deepgram audio..."):
-                        audio_file_path = handle_deepgram_audio(cleaned_response)
-                        st.audio(audio_file_path, format="audio/wav")
-                    url = "http://127.0.0.1:5000/process"
-                    headers = {
-                        "Content-Type": "application/json"
-                    }
-                    video_dir = os.path.abspath("video")
-                    video_file = "MyVideo.mp4"
-                    # Construct the full paths
-                    video_path = os.path.join(video_dir, video_file)
-                    audio_path = os.path.join(os.path.abspath('audio') , "output.mp3")
-                    # Define the output file path (you can customize this as needed)
-                    output_path = os.path.join("video", "MyVideo_output.mp4")
-                    payload = {
-                        "video_file": video_path,
-                        "vocal_file": audio_path,
-                        "output_file": output_path
-                    }
-                    st.divider()
-                    st.subheader("Video Report")
-                    with st.spinner("Creating a video report..."):
-                        response = requests.post(url, json=payload, headers=headers)
+                            # Process image
+                            response = process_image(vision_agent, IMAGE_PROMPT)
 
-                    # Check the response status code and print the response
-                    if response.status_code == 200:
-                        st.video(os.path.join(video_dir, 'MyVideo_output_Easy-Wav2Lip.mp4'))
-                except Exception as e:
-                    st.error(f"An error occurred in the pipeline: {e}")
+                            # Clean response
+                            cleaned_response = clean_response(reform_agent, response, CLEANING_PROMPT)
+                            print(cleaned_response)
+
+                        # Show cleaned response
+                        st.subheader("Summary")
+                        st.text_area("", value=cleaned_response, height=200)
+                        
+                        st.divider()
+
+                        # Show VisionAgent response
+                        st.subheader("Detailed Analysis")
+                        st.text_area("", value=response, height=200)
+
+                        # Generate Deepgram audio
+                        with st.spinner("Generating Deepgram audio..."):
+                            audio_file_path = handle_deepgram_audio(cleaned_response)
+                            st.audio(audio_file_path, format="audio/wav")
+                        url = "http://127.0.0.1:5000/process"
+                        headers = {
+                            "Content-Type": "application/json"
+                        }
+                        video_dir = os.path.abspath("video")
+                        video_file = "MyVideo.mp4"
+                        # Construct the full paths
+                        video_path = os.path.join(video_dir, video_file)
+                        audio_path = os.path.join(os.path.abspath('audio') , "output.mp3")
+                        # Define the output file path (you can customize this as needed)
+                        output_path = os.path.join("video", "MyVideo_output.mp4")
+                        payload = {
+                            "video_file": video_path,
+                            "vocal_file": audio_path,
+                            "output_file": output_path
+                        }
+                        st.divider()
+                        st.subheader("Video Report")
+                        with st.spinner("Creating a video report..."):
+                            response = requests.post(url, json=payload, headers=headers)
+
+                        # Check the response status code and print the response
+                        if response.status_code == 200:
+                            st.video(os.path.join(video_dir, 'MyVideo_output_Easy-Wav2Lip.mp4'))
+                    except Exception as e:
+                        st.error(f"An error occurred in the pipeline!")
 
     with tab3:  # Renamed "Home" to "Weather Forecast"
         st.header("Search Weather Forecast by Location")

@@ -4,3 +4,4 @@ __pycache__
 output.*
 logs
 video/.DS_Store
+.DS_Store
