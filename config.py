@@ -10,9 +10,12 @@ IMAGE_PROMPT = os.path.join(PROMPT_DIR, 'prompt.txt')
 CLEANING_PROMPT = os.path.join(PROMPT_DIR, 'cleaning_prompt.txt')
 
 # API Keys
-DEEPGRAM_API = "fb283957453aa87358b42a3e1260f5c3f5f88823"
-AWS_ACCESS_KEY = 'AKIAXTH4J5OP25KUCR7Z'
-AWS_SECRET_KEY = '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'
+with open('KEYS.txt', 'r') as f:
+    keys = f.readlines()
+    keys = [key.strip() for key in keys]
+    DEEPGRAM_API = keys[0]
+    AWS_ACCESS_KEY = keys[1]
+    AWS_SECRET_KEY = keys[2]
 
 # MODEL URLS
 VISION_MODEL_URL = "https://yellow-block-4f5a.psurabhi.workers.dev"
