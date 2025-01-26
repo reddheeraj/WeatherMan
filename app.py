@@ -1,69 +1,119 @@
-from weather_data import fetch_weather
+from logger import get_logger
+from Agents.vision_agent import VisionAgent
+from Agents.reform_agent import ReformAgent
+from config import IMAGE_DIR, IMAGE_PROMPT, CLEANING_PROMPT, VISION_MODEL_URL, REFORM_MODEL_URL
+from deepgram_audio import weather_audio
 import streamlit as st
+import tempfile
+
+# Initialize logger
+logger = get_logger(__name__)
+
+def process_image(vision_agent: VisionAgent, prompt_file: str) -> str:
+    """
+    Process an image using the VisionAgent and return the response.
+    
+    :param vision_agent: Instance of VisionAgent.
+    :param prompt_file: Path to the prompt file.
+    :return: Response from the VisionAgent.
+    """
+    try:
+        response = vision_agent.process_image_with_prompt(prompt_file)
+        return response
+    except Exception as e:
+        logger.error(f"Error during VisionAgent processing: {e}", exc_info=True)
+        raise
+
+def clean_response(reform_agent: ReformAgent, response: str, cleaning_prompt_file: str) -> str:
+    """
+    Clean a response using the ReformAgent and return the cleaned text.
+    
+    :param reform_agent: Instance of ReformAgent.
+    :param response: Raw response to be cleaned.
+    :param cleaning_prompt_file: Path to the cleaning prompt file.
+    :return: Cleaned response.
+    """
+    try:
+        cleaned_response = reform_agent.clean_response(response, cleaning_prompt_file)
+        return cleaned_response
+    except Exception as e:
+        logger.error(f"Error during ReformAgent cleaning: {e}", exc_info=True)
+        raise
+
+def handle_deepgram_audio(cleaned_response: str):
+    """
+    Handle Deepgram audio generation based on the cleaned response.
+    
+    :param cleaned_response: The cleaned response text.
+    """
+    try:
+        logger.info("Generating audio with Deepgram...")
+        output_file = weather_audio(cleaned_response)
+        logger.info("Audio generated successfully.")
+
+        return output_file
+    except Exception as e:
+        logger.error(f"Error during Deepgram audio generation: {e}", exc_info=True)
+        raise
 
 def main():
+    """
+    Main function to orchestrate the image processing, cleaning, and audio generation pipeline.
+    """
     st.set_page_config(page_title="WeatherMan", page_icon="🌦️", layout="wide")
-
     st.title("WeatherMan 🌦️")
+    
+    st.subheader("Upload Weather Images")
+    image_file = st.file_uploader("Upload an Image", type=["jpeg", "jpg", "png"])
+    
+    if image_file:
+        
+        if st.button("Run Analysis"):
+            with tempfile.NamedTemporaryFile(delete=False, suffix='.jpeg') as tmp_file:
+                tmp_file.write(image_file.read())
+                image_name = tmp_file.name
+                st.image(image_file, caption="Uploaded Image", use_container_width=True)
 
-    # Reordered tabs
-    tab1, tab2, tab3, tab4 = st.tabs(["Upload Image", "Analysis", "Weather Forecast", "About"])
-
-    with tab1:
-        st.header("Upload Weather Images")
-        st.write("Supported formats: `.jpeg`, `.jpg`, `.png`")
-        image_file = st.file_uploader("Upload an Image", type=["jpeg", "jpg", "png"])
-
-        if image_file:
-            st.image(image_file, caption="Uploaded Image", use_container_width=True)
-            st.success("Image uploaded successfully! Head over to the 'Analysis' tab to process it.")
-            st.session_state["uploaded_image"] = image_file
-
-    with tab2:
-        st.header("Analysis")
-        image_file = st.session_state.get("uploaded_image", None)
-
-        if image_file:
-            st.subheader("Quick Summary")
-            st.text_area("", value="Placeholder for analysis output", height=200)
-
-            st.divider()
-
-            st.subheader("Detailed Analysis")
-            st.text_area("", value="Placeholder for detailed analysis", height=200)
-
-            with st.spinner("Generating Video Summary..."):
-                st.video("./video/summary.mp4", format="video/mp4")
-        else:
-            st.warning("Please upload an image first from the 'Upload Image' tab.")
-
-    with tab3:  # Renamed "Home" to "Weather Forecast"
-        st.header("Search Weather Forecast by Location")
-        location = st.text_input("Enter a city or country name", value="College Station")
-
-        if st.button("Get Weather"):
+            logger.info("Initializing VisionAgent and ReformAgent...")
+            
+            # Initialize agents
+            vision_agent = VisionAgent(model_url=VISION_MODEL_URL, image_dir=IMAGE_DIR, image_name=image_name)
+            reform_agent = ReformAgent(model_url=REFORM_MODEL_URL)
+            
+            logger.info("Starting image processing pipeline...")
+            
             try:
-                weather_data = fetch_weather(location)
-                if weather_data:
-                    st.subheader(f"Current Weather in {location}")
-                    st.table([weather_data["current"]])  # Display general weather attributes
+                with st.spinner("Processing and performing analysis..."):
 
-                    st.subheader("Daily Weather Forecast")
-                    st.table(weather_data["daily"])  # Display daily forecast data
-                else:
-                    st.error(f"No weather data found for {location}. Please try again.")
+                    # Process image
+                    response = process_image(vision_agent, IMAGE_PROMPT)
+
+                    # Clean response
+                    cleaned_response = clean_response(reform_agent, response, CLEANING_PROMPT)
+                    print(cleaned_response)
+
+                # Show cleaned response
+                st.subheader("Quick Summary")
+                st.text_area("", value=cleaned_response, height=200)
+                
+                st.divider()
+
+                # Show VisionAgent response
+                st.subheader("Detailed Analysis")
+                st.text_area("", value=response, height=200)
+
+                # Generate Deepgram audio
+                with st.spinner("Generating Deepgram audio..."):
+                    audio_file_path = handle_deepgram_audio(cleaned_response)
+                    st.audio(audio_file_path, format="audio/wav")
+
             except Exception as e:
-                st.error(f"An error occurred: {e}")
-
-    with tab4:
-        st.header("About WeatherMan")
-        st.write(
-            """
-            **WeatherMan** is a powerful AI-driven application designed to make weather data analysis easy and accessible.
-            It is built using cutting-edge technology to deliver insights from visual weather data in a user-friendly way.
-            """
-        )
-        st.write("Contact: support@weatherman.ai | Version: 1.0.0")
+                st.error(f"An error occurred in the pipeline: {e}")
+    
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except Exception as e:
+        logger.critical(f"Unhandled exception in application: {e}", exc_info=True)
+        raise
