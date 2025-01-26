@@ -2,3 +2,5 @@ node_modules
 yellow-block-4f5a
 __pycache__
 output.*
+logs
+video/.DS_Store

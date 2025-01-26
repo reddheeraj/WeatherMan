@@ -3,10 +3,10 @@ from Agents.vision_agent import VisionAgent
 from Agents.reform_agent import ReformAgent
 from config import IMAGE_DIR, IMAGE_PROMPT, CLEANING_PROMPT, VISION_MODEL_URL, REFORM_MODEL_URL
 from deepgram_audio import weather_audio
-import tempfile
 import os
 from weather_data import fetch_weather
 import streamlit as st
+import requests
 
 logger = get_logger(__name__)
 
@@ -119,7 +119,30 @@ def main():
                     with st.spinner("Generating Deepgram audio..."):
                         audio_file_path = handle_deepgram_audio(cleaned_response)
                         st.audio(audio_file_path, format="audio/wav")
+                    url = "http://127.0.0.1:5000/process"
+                    headers = {
+                        "Content-Type": "application/json"
+                    }
+                    video_dir = os.path.abspath("video")
+                    video_file = "MyVideo.mp4"
+                    # Construct the full paths
+                    video_path = os.path.join(video_dir, video_file)
+                    audio_path = os.path.join(os.path.abspath('audio') , "output.mp3")
+                    # Define the output file path (you can customize this as needed)
+                    output_path = os.path.join("video", "MyVideo_output.mp4")
+                    payload = {
+                        "video_file": video_path,
+                        "vocal_file": audio_path,
+                        "output_file": output_path
+                    }
+                    st.divider()
+                    st.subheader("Video Report")
+                    with st.spinner("Creating a video report..."):
+                        response = requests.post(url, json=payload, headers=headers)
 
+                    # Check the response status code and print the response
+                    if response.status_code == 200:
+                        st.video(os.path.join(video_dir, 'MyVideo_output_Easy-Wav2Lip.mp4'))
                 except Exception as e:
                     st.error(f"An error occurred in the pipeline: {e}")
 
