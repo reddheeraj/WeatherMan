@@ -120,17 +120,8 @@ def main():
             # st.success("Image uploaded successfully! Head over to the 'Analysis' tab to process it.")
             st.session_state["uploaded_image"] = image_file
             col0, col1, col2 = st.columns([0.05, 0.06, 0.09])
-            with col1:
-                if st.button("Upload image"):
-                    
-                    @st.dialog("Upload image to S3")
-                    def dialog(file_path, bucket_name, image_name):
-                        st.write("Uploading image to DB...")
-                        s3.upload_file(file_path, bucket_name, image_name)
-                        st.write("Image uploaded successfully!")
-                        time.sleep(2)
-                        st.rerun()
-                    dialog(os.path.join(IMAGE_DIR,image_name), bucket_name, image_name)
+            if image_name in object_list:
+                col2 = st.columns([0.09])[0]
             with col2:
                 if st.button("Analyze image"):
                     image_file = st.session_state.get("uploaded_image", None)
@@ -199,6 +190,18 @@ def main():
                                 st.video(os.path.join(video_dir, 'MyVideo_output_Easy-Wav2Lip.mp4'))
                         except Exception as e:
                             st.error(f"An error occurred in the pipeline!")
+            if image_name not in object_list:
+                with col1:
+                    if st.button("Upload image"):
+                        
+                        @st.dialog("Upload image to S3")
+                        def dialog(file_path, bucket_name, image_name):
+                            st.write("Uploading image to DB...")
+                            s3.upload_file(file_path, bucket_name, image_name)
+                            st.write("Image uploaded successfully!")
+                            time.sleep(2)
+                            st.rerun()
+                        dialog(os.path.join(IMAGE_DIR,image_name), bucket_name, image_name)
 
     with tab3:  # Renamed "Home" to "Weather Forecast"
         st.header("Search Weather Forecast by Location")
