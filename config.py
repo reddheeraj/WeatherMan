@@ -4,6 +4,7 @@ import os
 IMAGE_DIR = 'images'
 PROMPT_DIR = 'prompts'
 AUDIO_DIR = 'audio'
+BUCKET_NAME = "weather-man"
 
 # Prompt files
 IMAGE_PROMPT = os.path.join(PROMPT_DIR, 'prompt.txt')

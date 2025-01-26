@@ -1,7 +1,7 @@
 from logger import get_logger
 from Agents.vision_agent import VisionAgent
 from Agents.reform_agent import ReformAgent
-from config import IMAGE_DIR, IMAGE_PROMPT, CLEANING_PROMPT, VISION_MODEL_URL, REFORM_MODEL_URL, AWS_ACCESS_KEY, AWS_SECRET_KEY
+from config import IMAGE_DIR, IMAGE_PROMPT, CLEANING_PROMPT, VISION_MODEL_URL, REFORM_MODEL_URL, AWS_ACCESS_KEY, AWS_SECRET_KEY, BUCKET_NAME
 from deepgram_audio import weather_audio
 import os
 from weather_data import fetch_weather
@@ -113,7 +113,7 @@ def main():
             aws_access_key_id=AWS_ACCESS_KEY,
             aws_secret_access_key= AWS_SECRET_KEY
         )
-    bucket_name = "weather-man"
+    bucket_name = BUCKET_NAME
     with tab1:
         st.header("Upload or Select a Weather Chart")
         
