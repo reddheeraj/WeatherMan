@@ -61,9 +61,9 @@ def handle_deepgram_audio(cleaned_response: str):
 
 
 def main():
-    st.set_page_config(page_title="WeatherMan", page_icon="🌦️")
+    st.set_page_config(page_title="NimbusNews", page_icon="🌦️")
 
-    st.title("WeatherMan 🌦️")
+    st.title("NimbusNews 🌦️")
 
     # Reordered tabs
     tab1, tab3, tab4 = st.tabs(["Generate Report", "Weather Forecast", "About"])
