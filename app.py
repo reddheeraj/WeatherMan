@@ -8,6 +8,7 @@ from weather_data import fetch_weather
 import streamlit as st
 import requests
 import boto3
+import time
 
 logger = get_logger(__name__)
 
@@ -104,74 +105,86 @@ def main():
             st.image(image_file, caption="Uploaded Image", use_container_width=False)
             # st.success("Image uploaded successfully! Head over to the 'Analysis' tab to process it.")
             st.session_state["uploaded_image"] = image_file
-        
-            if st.button("Analyze image"):
-                image_file = st.session_state.get("uploaded_image", None)
-                
-                if image_file == None:
-                    st.error("Please upload an image!")
-                    st.stop()
-                # image_name = image_file.name
-                # st.image(image_file, caption="Uploaded Image", use_container_width=True)
-                logger.info("Initializing VisionAgent and ReformAgent...")
-                # Initialize agents
-                vision_agent = VisionAgent(model_url=VISION_MODEL_URL, image_dir=IMAGE_DIR, image_name=image_name)
-                reform_agent = ReformAgent(model_url=REFORM_MODEL_URL)
+            col0, col1, col2 = st.columns([0.05, 0.06, 0.09])
+            with col1:
+                if st.button("Upload image"):
                     
-                logger.info("Starting image processing pipeline...")
-
-                if image_file:
-                    try:
-                        with st.spinner("Processing and performing analysis..."):
-                            # st.subheader("Analysis")
-
-                            # Process image
-                            response = process_image(vision_agent, IMAGE_PROMPT)
-
-                            # Clean response
-                            cleaned_response = clean_response(reform_agent, response, CLEANING_PROMPT)
-                            print(cleaned_response)
-
-                        # Show cleaned response
-                        st.subheader("Summary")
-                        st.text_area("", value=cleaned_response, height=200)
+                    @st.dialog("Upload image to S3")
+                    def dialog(file_path, bucket_name, image_name):
+                        st.write("Uploading image to DB...")
+                        s3.upload_file(file_path, bucket_name, image_name)
+                        st.write("Image uploaded successfully!")
+                        time.sleep(2)
+                        st.rerun()
+                    dialog(os.path.join(IMAGE_DIR,image_name), bucket_name, image_name)
+            with col2:
+                if st.button("Analyze image"):
+                    image_file = st.session_state.get("uploaded_image", None)
+                    
+                    if image_file == None:
+                        st.error("Please upload an image!")
+                        st.stop()
+                    # image_name = image_file.name
+                    # st.image(image_file, caption="Uploaded Image", use_container_width=True)
+                    logger.info("Initializing VisionAgent and ReformAgent...")
+                    # Initialize agents
+                    vision_agent = VisionAgent(model_url=VISION_MODEL_URL, image_dir=IMAGE_DIR, image_name=image_name)
+                    reform_agent = ReformAgent(model_url=REFORM_MODEL_URL)
                         
-                        st.divider()
+                    logger.info("Starting image processing pipeline...")
 
-                        # Show VisionAgent response
-                        st.subheader("Detailed Analysis")
-                        st.text_area("", value=response, height=200)
+                    if image_file:
+                        try:
+                            with st.spinner("Processing and performing analysis..."):
+                                # st.subheader("Analysis")
 
-                        # Generate Deepgram audio
-                        with st.spinner("Generating Deepgram audio..."):
-                            audio_file_path = handle_deepgram_audio(cleaned_response)
-                            st.audio(audio_file_path, format="audio/wav")
-                        url = "http://127.0.0.1:5000/process"
-                        headers = {
-                            "Content-Type": "application/json"
-                        }
-                        video_dir = os.path.abspath("video")
-                        video_file = "MyVideo.mp4"
-                        # Construct the full paths
-                        video_path = os.path.join(video_dir, video_file)
-                        audio_path = os.path.join(os.path.abspath('audio') , "output.mp3")
-                        # Define the output file path (you can customize this as needed)
-                        output_path = os.path.join("video", "MyVideo_output.mp4")
-                        payload = {
-                            "video_file": video_path,
-                            "vocal_file": audio_path,
-                            "output_file": output_path
-                        }
-                        st.divider()
-                        st.subheader("Video Report")
-                        with st.spinner("Creating a video report..."):
-                            response = requests.post(url, json=payload, headers=headers)
+                                # Process image
+                                response = process_image(vision_agent, IMAGE_PROMPT)
 
-                        # Check the response status code and print the response
-                        if response.status_code == 200:
-                            st.video(os.path.join(video_dir, 'MyVideo_output_Easy-Wav2Lip.mp4'))
-                    except Exception as e:
-                        st.error(f"An error occurred in the pipeline!")
+                                # Clean response
+                                cleaned_response = clean_response(reform_agent, response, CLEANING_PROMPT)
+                                print(cleaned_response)
+
+                            # Show cleaned response
+                            st.subheader("Summary")
+                            st.text_area("", value=cleaned_response, height=200)
+                            
+                            st.divider()
+
+                            # Show VisionAgent response
+                            st.subheader("Detailed Analysis")
+                            st.text_area("", value=response, height=200)
+
+                            # Generate Deepgram audio
+                            with st.spinner("Generating Deepgram audio..."):
+                                audio_file_path = handle_deepgram_audio(cleaned_response)
+                                st.audio(audio_file_path, format="audio/wav")
+                            url = "http://127.0.0.1:5000/process"
+                            headers = {
+                                "Content-Type": "application/json"
+                            }
+                            video_dir = os.path.abspath("video")
+                            video_file = "MyVideo.mp4"
+                            # Construct the full paths
+                            video_path = os.path.join(video_dir, video_file)
+                            audio_path = os.path.join(os.path.abspath('audio') , "output.mp3")
+                            # Define the output file path (you can customize this as needed)
+                            output_path = os.path.join("video", "MyVideo_output.mp4")
+                            payload = {
+                                "video_file": video_path,
+                                "vocal_file": audio_path,
+                                "output_file": output_path
+                            }
+                            st.divider()
+                            st.subheader("Video Report")
+                            with st.spinner("Creating a video report..."):
+                                response = requests.post(url, json=payload, headers=headers)
+
+                            # Check the response status code and print the response
+                            if response.status_code == 200:
+                                st.video(os.path.join(video_dir, 'MyVideo_output_Easy-Wav2Lip.mp4'))
+                        except Exception as e:
+                            st.error(f"An error occurred in the pipeline!")
 
     with tab3:  # Renamed "Home" to "Weather Forecast"
         st.header("Search Weather Forecast by Location")
