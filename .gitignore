@@ -7,3 +7,5 @@ video/.DS_Store
 .DS_Store
 KEYS.*
 .streamlit
+test.py
+tet.py
