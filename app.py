@@ -3,10 +3,11 @@ from Agents.vision_agent import VisionAgent
 from Agents.reform_agent import ReformAgent
 from config import IMAGE_DIR, IMAGE_PROMPT, CLEANING_PROMPT, VISION_MODEL_URL, REFORM_MODEL_URL
 from deepgram_audio import weather_audio
-import streamlit as st
 import tempfile
+import os
+from weather_data import fetch_weather
+import streamlit as st
 
-# Initialize logger
 logger = get_logger(__name__)
 
 def process_image(vision_agent: VisionAgent, prompt_file: str) -> str:
@@ -56,64 +57,99 @@ def handle_deepgram_audio(cleaned_response: str):
         logger.error(f"Error during Deepgram audio generation: {e}", exc_info=True)
         raise
 
-def main():
-    """
-    Main function to orchestrate the image processing, cleaning, and audio generation pipeline.
-    """
-    st.set_page_config(page_title="WeatherMan", page_icon="🌦️", layout="wide")
-    st.title("WeatherMan 🌦️")
-    
-    st.subheader("Upload Weather Images")
-    image_file = st.file_uploader("Upload an Image", type=["jpeg", "jpg", "png"])
-    
-    if image_file:
-        
-        if st.button("Run Analysis"):
-            with tempfile.NamedTemporaryFile(delete=False, suffix='.jpeg') as tmp_file:
-                tmp_file.write(image_file.read())
-                image_name = tmp_file.name
-                st.image(image_file, caption="Uploaded Image", use_container_width=True)
 
-            logger.info("Initializing VisionAgent and ReformAgent...")
+def main():
+    st.set_page_config(page_title="WeatherMan", page_icon="🌦️", layout="wide")
+
+    st.title("WeatherMan 🌦️")
+
+    # Reordered tabs
+    tab1, tab3, tab4 = st.tabs(["Upload Image", "Weather Forecast", "About"])
+
+    with tab1:
+        st.header("Upload Weather Images")
+        image_file = st.file_uploader("Upload an Image", type=["jpeg", "jpg", "png"])
+        if image_file:
+            with open(os.path.join(IMAGE_DIR,image_file.name),"wb") as f: 
+                f.write(image_file.getbuffer())         
+            st.success("Saved File")
+        if image_file:
+            st.image(image_file, caption="Uploaded Image", use_container_width=False)
+            st.success("Image uploaded successfully! Head over to the 'Analysis' tab to process it.")
+            st.session_state["uploaded_image"] = image_file
+        
+        if st.button("Analyze image"):
+            st.subheader("Analysis")
+            image_file = st.session_state.get("uploaded_image", None)
             
+            if image_file == None:
+                st.error("Please upload an image!")
+                st.stop()
+            image_name = image_file.name
+            # st.image(image_file, caption="Uploaded Image", use_container_width=True)
+            logger.info("Initializing VisionAgent and ReformAgent...")
             # Initialize agents
             vision_agent = VisionAgent(model_url=VISION_MODEL_URL, image_dir=IMAGE_DIR, image_name=image_name)
             reform_agent = ReformAgent(model_url=REFORM_MODEL_URL)
-            
-            logger.info("Starting image processing pipeline...")
-            
-            try:
-                with st.spinner("Processing and performing analysis..."):
-
-                    # Process image
-                    response = process_image(vision_agent, IMAGE_PROMPT)
-
-                    # Clean response
-                    cleaned_response = clean_response(reform_agent, response, CLEANING_PROMPT)
-                    print(cleaned_response)
-
-                # Show cleaned response
-                st.subheader("Quick Summary")
-                st.text_area("", value=cleaned_response, height=200)
                 
-                st.divider()
+            logger.info("Starting image processing pipeline...")
 
-                # Show VisionAgent response
-                st.subheader("Detailed Analysis")
-                st.text_area("", value=response, height=200)
+            if image_file:
+                try:
+                    with st.spinner("Processing and performing analysis..."):
 
-                # Generate Deepgram audio
-                with st.spinner("Generating Deepgram audio..."):
-                    audio_file_path = handle_deepgram_audio(cleaned_response)
-                    st.audio(audio_file_path, format="audio/wav")
+                        # Process image
+                        response = process_image(vision_agent, IMAGE_PROMPT)
 
+                        # Clean response
+                        cleaned_response = clean_response(reform_agent, response, CLEANING_PROMPT)
+                        print(cleaned_response)
+
+                    # Show cleaned response
+                    st.subheader("Quick Summary")
+                    st.text_area("", value=cleaned_response, height=200)
+                    
+                    st.divider()
+
+                    # Show VisionAgent response
+                    st.subheader("Detailed Analysis")
+                    st.text_area("", value=response, height=200)
+
+                    # Generate Deepgram audio
+                    with st.spinner("Generating Deepgram audio..."):
+                        audio_file_path = handle_deepgram_audio(cleaned_response)
+                        st.audio(audio_file_path, format="audio/wav")
+
+                except Exception as e:
+                    st.error(f"An error occurred in the pipeline: {e}")
+
+    with tab3:  # Renamed "Home" to "Weather Forecast"
+        st.header("Search Weather Forecast by Location")
+        location = st.text_input("Enter a city or country name", value="College Station")
+
+        if st.button("Get Weather"):
+            try:
+                weather_data = fetch_weather(location)
+                if weather_data:
+                    st.subheader(f"Current Weather in {location}")
+                    st.table([weather_data["current"]])  # Display general weather attributes
+
+                    st.subheader("Daily Weather Forecast")
+                    st.table(weather_data["daily"])  # Display daily forecast data
+                else:
+                    st.error(f"No weather data found for {location}. Please try again.")
             except Exception as e:
-                st.error(f"An error occurred in the pipeline: {e}")
-    
+                st.error(f"An error occurred: {e}")
+
+    with tab4:
+        st.header("About WeatherMan")
+        st.write(
+            """
+            **WeatherMan** is a powerful AI-driven application designed to make weather data analysis easy and accessible.
+            It is built using cutting-edge technology to deliver insights from visual weather data in a user-friendly way.
+            """
+        )
+        st.write("Contact: support@weatherman.ai | Version: 1.0.0")
 
 if __name__ == "__main__":
-    try:
-        main()
-    except Exception as e:
-        logger.critical(f"Unhandled exception in application: {e}", exc_info=True)
-        raise
+    main()
