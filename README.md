@@ -1,3 +1,4 @@
 # NimbusNews
 
-![image](https://github.com/user-attachments/assets/5a2183b3-cd4a-400a-ad0d-ce56203a0128)
+![image](https://github.com/user-attachments/assets/478fc8fc-5b60-4871-96bf-d669e25ea8f7)
+
