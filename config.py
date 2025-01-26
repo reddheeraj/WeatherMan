@@ -18,5 +18,5 @@ with open('KEYS.txt', 'r') as f:
     AWS_SECRET_KEY = keys[2]
 
 # MODEL URLS
-VISION_MODEL_URL = "https://yellow-block-4f5a.psurabhi.workers.dev"
-REFORM_MODEL_URL = "https://llama.psurabhi.workers.dev/"
+VISION_MODEL_URL = "https://llama-vision.akash-pillai-0810.workers.dev/"
+REFORM_MODEL_URL = "https://llama.akash-pillai-0810.workers.dev/"

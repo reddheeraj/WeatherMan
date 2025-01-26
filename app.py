@@ -221,8 +221,8 @@ def main():
                                 s3.upload_file(os.path.join('video', 'MyVideo_output_Easy-Wav2Lip.mp4'), bucket_name, saved_video)
                                 st.success(f"Video uploaded as {saved_video}")
                         except Exception as e:
-                            st.error(f"An error occurred in the pipeline!")
-            if image_name not in object_list:
+                            st.error(f"An error occurred in the pipeline! {e}")
+            if image_name not in object_list and drop_down_model != "Select a model":
                 with col1:
                     if st.button("Upload image"):
                         
@@ -273,7 +273,7 @@ def main():
             It is built using cutting-edge technology to deliver insights from visual weather data in a user-friendly way.
             """
         )
-        st.write("Contact: praneetasritha@gmail.com | Version: 1.0.0")
+        # st.write("Contact: praneetasritha@gmail.com | Version: 1.0.0")
 
 if __name__ == "__main__":
     main()
