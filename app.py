@@ -62,6 +62,20 @@ def handle_deepgram_audio(cleaned_response: str):
 
 def main():
     st.set_page_config(page_title="NimbusNews", page_icon="🌦️")
+    st.markdown("""
+        <style>
+            /* Hide the Deploy button */
+            .stDeployButton {
+                display: none;
+            }
+            /* Optional: Hide the hamburger menu */
+            #MainMenu {visibility: hidden;}
+            
+            .stAppHeader {
+                display: none;
+            }
+        </style>
+    """, unsafe_allow_html=True)
 
     st.title("NimbusNews 🌦️")
 
@@ -69,7 +83,7 @@ def main():
     tab1, tab3, tab4 = st.tabs(["Generate Report", "Weather Forecast", "About"])
 
     with tab1:
-        st.header("Upload Weather Images")
+        st.header("Upload or Select a Weather Chart")
         
         # images from s3
         s3 = boto3.client(
@@ -102,7 +116,7 @@ def main():
                     f.write(image_file)         
             # st.success("Saved File")
         if image_file:
-            st.image(image_file, caption="Uploaded Image", use_container_width=False)
+            st.image(image_file, caption=image_name, use_container_width=False)
             # st.success("Image uploaded successfully! Head over to the 'Analysis' tab to process it.")
             st.session_state["uploaded_image"] = image_file
             col0, col1, col2 = st.columns([0.05, 0.06, 0.09])
@@ -205,14 +219,14 @@ def main():
                 st.error(f"An error occurred: {e}")
 
     with tab4:
-        st.header("About WeatherMan")
+        st.header("About NimbusNews")
         st.write(
             """
-            **WeatherMan** is a powerful AI-driven application designed to make weather data analysis easy and accessible.
+            **NimbusNews** is a powerful Agentic AI application designed to make weather data analysis easy and accessible from 4 panel weather charts.
             It is built using cutting-edge technology to deliver insights from visual weather data in a user-friendly way.
             """
         )
-        st.write("Contact: support@weatherman.ai | Version: 1.0.0")
+        st.write("Contact: praneetasritha@gmail.com | Version: 1.0.0")
 
 if __name__ == "__main__":
     main()
