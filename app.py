@@ -9,6 +9,7 @@ import streamlit as st
 import requests
 import boto3
 import time
+import datetime
 
 logger = get_logger(__name__)
 
@@ -76,30 +77,58 @@ def main():
             }
         </style>
     """, unsafe_allow_html=True)
+    video_html = """
+		<style>
 
+		#myVideo {
+		  position: fixed;
+		  right: 0;
+		  bottom: 0;
+		  min-width: 100%; 
+		  min-height: 100%;
+		}
+
+		.content {
+		  position: fixed;
+		  bottom: 0;
+		  background: rgba(0, 0, 0, 0.5);
+		  color: #f1f1f1;
+		  width: 100%;
+		  padding: 20px;
+		}
+
+		</style>	
+		<video autoplay muted loop id="myVideo">
+		  <source src="https://ik.imagekit.io/lqjxfaaxhj/background.mp4")>
+		  Your browser does not support HTML5 video.
+		</video>
+    """
+    st.markdown(video_html, unsafe_allow_html=True)
     st.title("NimbusNews 🌦️")
 
     # Reordered tabs
-    tab1, tab3, tab4 = st.tabs(["Generate Report", "Weather Forecast", "About"])
-
-    with tab1:
-        st.header("Upload or Select a Weather Chart")
-        
-        # images from s3
-        s3 = boto3.client(
+    tab1, tab2, tab3, tab4 = st.tabs(["Generate Report", "Video Reports", "Weather Forecast", "About"])
+    s3 = boto3.client(
             "s3",
             aws_access_key_id=AWS_ACCESS_KEY,
             aws_secret_access_key= AWS_SECRET_KEY
         )
+    bucket_name = "weather-man"
+    with tab1:
+        st.header("Upload or Select a Weather Chart")
+        
+        # images from s3
+        
         # Access the weather-man bucket
-        bucket_name = "weather-man"
+        
         obj_list = s3.list_objects_v2(Bucket=bucket_name).get("Contents", [])
         # st.write("obj from s3", obj_list)
-        object_list = [obj["Key"] for obj in obj_list]
+        object_list = [obj["Key"] for obj in obj_list if not obj["Key"].startswith("video/")]
         # for obj in object_list:
         #     response = s3.get_object(Bucket=bucket_name, Key=obj)
         #     image = response["Body"].read()
             # st.image(image, caption=obj, use_container_width=True)
+        # drop_down_model = st.selectbox("Select a model", ["Select a model", "llama-3.2-90b-vision-instruct", "ReformAgent"])
         drop_down = st.selectbox("Select an image", ["Select an image"] + object_list)
         if drop_down == "Select an image":
             image_file = st.file_uploader("Upload an Image", type=["jpeg", "jpg", "png"])
@@ -123,7 +152,7 @@ def main():
             if image_name in object_list:
                 col2 = st.columns([0.09])[0]
             with col2:
-                if st.button("Analyze image"):
+                if st.button("Analyze image", key="analyze_image"):
                     image_file = st.session_state.get("uploaded_image", None)
                     
                     if image_file == None:
@@ -188,6 +217,8 @@ def main():
                             # Check the response status code and print the response
                             if response.status_code == 200:
                                 st.video(os.path.join(video_dir, 'MyVideo_output_Easy-Wav2Lip.mp4'))
+                                s3.upload_file(os.path.join('video', 'MyVideo_output_Easy-Wav2Lip.mp4'), bucket_name, "video/"+image_name+"_output_" + datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S") + ".mp4")
+                                st.success("Video uploaded successfully!")
                         except Exception as e:
                             st.error(f"An error occurred in the pipeline!")
             if image_name not in object_list:
@@ -196,12 +227,24 @@ def main():
                         
                         @st.dialog("Upload image to S3")
                         def dialog(file_path, bucket_name, image_name):
-                            st.write("Uploading image to DB...")
+                            st.write("Uploading image to database...")
                             s3.upload_file(file_path, bucket_name, image_name)
                             st.write("Image uploaded successfully!")
                             time.sleep(2)
                             st.rerun()
                         dialog(os.path.join(IMAGE_DIR,image_name), bucket_name, image_name)
+
+    with tab2:
+        st.header("View Video Reports")
+        bj_list = s3.list_objects_v2(Bucket=bucket_name).get("Contents", [])
+        # st.write("obj from s3", obj_list)
+        object_list = [obj["Key"][6:] for obj in obj_list if obj["Key"].startswith("video/") and not obj["Key"] == "video/"]
+        drop_down = st.selectbox("Select a video", ["Select a video"] + object_list)
+        if drop_down != "Select a video":
+            response = s3.get_object(Bucket=bucket_name, Key='video/' + drop_down)
+            video_file = response["Body"].read()
+            video_name = drop_down
+            st.video(video_file, format="video/mp4")
 
     with tab3:  # Renamed "Home" to "Weather Forecast"
         st.header("Search Weather Forecast by Location")
