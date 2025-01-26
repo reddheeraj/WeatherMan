@@ -5,4 +5,5 @@ DO NOT include:
 2. Any greetings like 'Good evening' etc.
 3. Any other text which cannot be spoken by the weather reporter.
 Respond only with the weather report which can be read on the news channel.
+Respond only in 3 brief paragraphs which will take approximately 1 minute 30 seconds to speak at a normal pace.
 Here is the report:

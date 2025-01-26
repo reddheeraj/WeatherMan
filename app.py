@@ -13,7 +13,7 @@ import datetime
 
 logger = get_logger(__name__)
 
-def process_image(vision_agent: VisionAgent, prompt_file: str) -> str:
+def process_image(vision_agent: VisionAgent, prompt_file: str, drop_down_model: str) -> str:
     """
     Process an image using the VisionAgent and return the response.
     
@@ -22,7 +22,7 @@ def process_image(vision_agent: VisionAgent, prompt_file: str) -> str:
     :return: Response from the VisionAgent.
     """
     try:
-        response = vision_agent.process_image_with_prompt(prompt_file)
+        response = vision_agent.process_image_with_prompt(prompt_file, drop_down_model)
         return response
     except Exception as e:
         logger.error(f"Error during VisionAgent processing: {e}", exc_info=True)
@@ -128,7 +128,7 @@ def main():
         #     response = s3.get_object(Bucket=bucket_name, Key=obj)
         #     image = response["Body"].read()
             # st.image(image, caption=obj, use_container_width=True)
-        # drop_down_model = st.selectbox("Select a model", ["Select a model", "llama-3.2-90b-vision-instruct", "ReformAgent"])
+        drop_down_model = st.selectbox("Select a model", ["Select a model", "llama-3.2-90b-vision-instruct", "llama-3.2-11b-vision-instruct"])
         drop_down = st.selectbox("Select an image", ["Select an image"] + object_list)
         if drop_down == "Select an image":
             image_file = st.file_uploader("Upload an Image", type=["jpeg", "jpg", "png"])
@@ -173,7 +173,7 @@ def main():
                                 # st.subheader("Analysis")
 
                                 # Process image
-                                response = process_image(vision_agent, IMAGE_PROMPT)
+                                response = process_image(vision_agent, IMAGE_PROMPT, drop_down_model)
 
                                 # Clean response
                                 cleaned_response = clean_response(reform_agent, response, CLEANING_PROMPT)
@@ -217,8 +217,9 @@ def main():
                             # Check the response status code and print the response
                             if response.status_code == 200:
                                 st.video(os.path.join(video_dir, 'MyVideo_output_Easy-Wav2Lip.mp4'))
-                                s3.upload_file(os.path.join('video', 'MyVideo_output_Easy-Wav2Lip.mp4'), bucket_name, "video/"+image_name+"_output_" + datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S") + ".mp4")
-                                st.success("Video uploaded successfully!")
+                                saved_video = "video/"+image_name+"_"+drop_down_model+"_"+datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S") + ".mp4"
+                                s3.upload_file(os.path.join('video', 'MyVideo_output_Easy-Wav2Lip.mp4'), bucket_name, saved_video)
+                                st.success(f"Video uploaded as {saved_video}")
                         except Exception as e:
                             st.error(f"An error occurred in the pipeline!")
             if image_name not in object_list:
