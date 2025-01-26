@@ -273,7 +273,5 @@ def main():
             It is built using cutting-edge technology to deliver insights from visual weather data in a user-friendly way.
             """
         )
-        # st.write("Contact: praneetasritha@gmail.com | Version: 1.0.0")
-
 if __name__ == "__main__":
     main()
