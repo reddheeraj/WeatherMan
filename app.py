@@ -59,7 +59,7 @@ def handle_deepgram_audio(cleaned_response: str):
 
 
 def main():
-    st.set_page_config(page_title="WeatherMan", page_icon="🌦️", layout="wide")
+    st.set_page_config(page_title="WeatherMan", page_icon="🌦️")
 
     st.title("WeatherMan 🌦️")
 
@@ -79,7 +79,6 @@ def main():
             st.session_state["uploaded_image"] = image_file
         
         if st.button("Analyze image"):
-            st.subheader("Analysis")
             image_file = st.session_state.get("uploaded_image", None)
             
             if image_file == None:
@@ -97,6 +96,7 @@ def main():
             if image_file:
                 try:
                     with st.spinner("Processing and performing analysis..."):
+                        # st.subheader("Analysis")
 
                         # Process image
                         response = process_image(vision_agent, IMAGE_PROMPT)
@@ -106,7 +106,7 @@ def main():
                         print(cleaned_response)
 
                     # Show cleaned response
-                    st.subheader("Quick Summary")
+                    st.subheader("Summary")
                     st.text_area("", value=cleaned_response, height=200)
                     
                     st.divider()
